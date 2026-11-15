@@ -4,29 +4,49 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="color-scheme" content="light dark">
-    <title>Diagnostic · Free Claude Code</title>
+    <title>Configuration et diagnostic · Free Claude Code</title>
     <link rel="stylesheet" href="/_diagnostics/style.css">
     <script src="/_diagnostics/app.js" defer></script>
   </head>
   <body>
     <main>
-      <a href="/">← Ouvrir DeepSeek Harness</a>
-      <h1>Diagnostic du serveur</h1>
+      <h1>Configuration et diagnostic</h1>
+      <p id="connection" role="status">Connexion au serveur…</p>
+
+      <section id="setup" aria-labelledby="setup-title" hidden>
+        <h2 id="setup-title">Activer DeepSeek</h2>
+        <ol>
+          <li><a id="provider-link" href="https://routeway.ai/">Créer une clé API chez le fournisseur</a>.</li>
+          <li id="render-help" hidden>Dans les <a id="render-link" href="https://dashboard.render.com/">variables Render</a>, ajoute <code id="render-key"></code> et colle la clé comme valeur. Choisis <strong>Save and deploy</strong>.</li>
+          <li id="vps-help" hidden>Ajoute la clé dans <code id="vps-key"></code> dans le fichier <code>.env</code>, puis relance le service avec <code>docker compose up -d</code>.</li>
+          <li>Une fois le déploiement terminé, reviens ici, actualise et clique sur <strong>Tester DeepSeek</strong>.</li>
+        </ol>
+      </section>
+
       <dl>
-        <dt>Fournisseur</dt><dd id="provider">Vérification…</dd>
-        <dt>Modèle</dt><dd id="model">Vérification…</dd>
-        <dt>Clé API</dt><dd id="key">Vérification…</dd>
-        <dt>DeepSeek Harness</dt><dd id="harness">Vérification…</dd>
-        <dt>Free Claude Code</dt><dd id="proxy">Vérification…</dd>
+        <dt>Fournisseur</dt><dd id="provider">En attente</dd>
+        <dt>Modèle</dt><dd id="model">En attente</dd>
+        <dt>Clé API</dt><dd id="key">En attente</dd>
+        <dt>DeepSeek Harness</dt><dd id="harness">En attente</dd>
+        <dt>Free Claude Code</dt><dd id="proxy">En attente</dd>
       </dl>
-      <p id="setup" hidden>Ajoute la clé API du fournisseur dans les variables d’environnement du serveur, puis redéploie.</p>
+
       <div class="actions">
+        <a id="open" class="action primary" href="/_login" hidden>Ouvrir Harness</a>
         <button id="refresh" type="button">Actualiser</button>
-        <button id="workspace" type="button">Tester les fichiers</button>
-        <button id="probe" type="button" disabled>Tester DeepSeek</button>
       </div>
-      <p id="result" role="status" aria-live="polite"></p>
-      <p class="note">Le test DeepSeek envoie une requête courte et compte dans le quota du fournisseur.</p>
+
+      <section class="checks" aria-label="Vérifications">
+        <div>
+          <button id="probe" type="button" aria-describedby="model-note" disabled>Tester DeepSeek</button>
+          <p id="model-note" class="note">Envoie une requête courte qui compte dans le quota du fournisseur.</p>
+          <p id="model-result" class="result" role="status"></p>
+        </div>
+        <div>
+          <button id="workspace" type="button" disabled>Tester les fichiers</button>
+          <p id="workspace-result" class="result" role="status"></p>
+        </div>
+      </section>
     </main>
   </body>
 </html>

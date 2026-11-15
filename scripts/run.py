@@ -207,8 +207,8 @@ class HarnessLogin(BaseHTTPRequestHandler):
         if path not in ("/", "/_login"):
             self.send_error(404)
             return
-        if self.boot_token is None:
-            self.send_error(503, "DeepSeek Harness is starting")
+        if self.boot_token is None or (path == "/" and not self.diagnostics.key_configured):
+            self.redirect_to_diagnostics()
             return
         host = self.headers["Host"]
         request = Request(
@@ -224,7 +224,14 @@ class HarnessLogin(BaseHTTPRequestHandler):
                         self.send_header(name, value)
                 self.end_headers()
         except (URLError, TimeoutError):
-            self.send_error(503, "DeepSeek Harness is starting")
+            self.redirect_to_diagnostics()
+
+    def redirect_to_diagnostics(self):
+        self.send_response(303)
+        self.send_header("Location", "/_diagnostics")
+        self.send_header("Cache-Control", "no-store")
+        self.send_header("Content-Length", "0")
+        self.end_headers()
 
     def do_POST(self):
         path = urlsplit(self.path).path
@@ -293,13 +300,14 @@ def run():
     })
     print(f"Interface {origin} · {status}" if password else "Interface verrouillée : renseigner WEB_PASSWORD.", flush=True)
     if password:
-        write_profile()
-        configure_fcc()
         HarnessLogin.diagnostics = Diagnostics(
-            origin, selected, bool(key), f"{CUSTOM_ID}/{model}", WORKSPACE, TOKEN_FILE, FCC_PORT, HTTP,
+            origin, selected, PROVIDERS[selected][0], bool(key), f"{CUSTOM_ID}/{model}",
+            WORKSPACE, TOKEN_FILE, FCC_PORT, HTTP,
         )
         login = ThreadingHTTPServer(("127.0.0.1", TOKEN_PORT), HarnessLogin)
         Thread(target=login.serve_forever, daemon=True).start()
+        write_profile()
+        configure_fcc()
         wait_for_fcc(start(["fcc-server"], fcc_environment(include_key=True)))
         start_harness(origin, authority)
     while all(process.poll() is None for process in PROCESSES):

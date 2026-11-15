@@ -1,6 +1,8 @@
 """Diagnostics for the owner, served behind the authenticated edge."""
 
 import json
+import os
+import re
 import tempfile
 import time
 from http import HTTPStatus
@@ -11,12 +13,19 @@ from urllib.request import Request
 
 ASSETS = Path(__file__).resolve().parent.parent / "config"
 PROBE_COOLDOWN = 60
+PROVIDER_SETUP_URLS = {
+    "routeway": "https://routeway.ai/",
+    "unorouter": "https://unorouter.com/",
+    "openrouter": "https://openrouter.ai/keys",
+    "deepseek": "https://platform.deepseek.com/api_keys",
+}
 
 
 class Diagnostics:
-    def __init__(self, origin, provider, key_configured, model, workspace, token_file, fcc_port, http):
+    def __init__(self, origin, provider, key_name, key_configured, model, workspace, token_file, fcc_port, http):
         self.origin = origin
         self.provider = provider
+        self.key_name = key_name
         self.key_configured = key_configured
         self.model = model
         self.workspace = workspace
@@ -57,10 +66,18 @@ class Diagnostics:
             return False
 
     def status(self, harness_ready):
+        service_id = os.environ.get("RENDER_SERVICE_ID", "")
+        render_url = (
+            f"https://dashboard.render.com/web/{service_id}/env"
+            if re.fullmatch(r"srv-[a-z0-9]+", service_id) else None
+        )
         return {
             "provider": self.provider,
             "model": self.model.partition("/")[2],
             "keyConfigured": self.key_configured,
+            "keyName": self.key_name,
+            "providerSetupUrl": PROVIDER_SETUP_URLS[self.provider],
+            "renderEnvironmentUrl": render_url,
             "harnessReady": harness_ready,
             "proxyReady": self.proxy_ready(),
         }

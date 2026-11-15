@@ -4,9 +4,9 @@ Interface Web officielle de DeepSeek Harness avec le proxy Free Claude Code. Uti
 
 ## Render
 
-Le service utilise Docker et le plan Free. Dans **Environment**, ajoutez `ROUTEWAY_API_KEY` (depuis le [tableau de bord Routeway](https://routeway.ai/)) et renseignez `WEB_PASSWORD` (16 à 72 octets) si le service ne dispose pas déjà d’un mot de passe, puis choisissez **Save, rebuild, and deploy**. Ouvrez l’URL HTTPS du service et connectez-vous avec l’identifiant `admin` et ce mot de passe. `WEB_USERNAME` permet de changer l’identifiant.
+Le service utilise Docker et le plan Free. Dans **Environment**, ajoutez `ROUTEWAY_API_KEY` (depuis le [tableau de bord Routeway](https://routeway.ai/)) et renseignez `WEB_PASSWORD` (16 à 72 octets) si le service ne dispose pas déjà d’un mot de passe, puis choisissez **Save and deploy**. Ouvrez l’URL HTTPS du service et connectez-vous avec l’identifiant `admin` et ce mot de passe. `WEB_USERNAME` permet de changer l’identifiant.
 
-La page `/_diagnostics` affiche le modèle, la présence de la clé et l’état de DeepSeek Harness et de Free Claude Code. Elle permet de vérifier l’écriture dans l’espace de travail et de déclencher un test du modèle. Si vous effacez vos cookies ou que la session Harness expire, ouvrez la racine du service ou `/_login`.
+La première visite ouvre la configuration si la clé du fournisseur manque. Lors d’un démarrage à froid, la page se met à jour automatiquement pendant le chargement de Harness. La page `/_diagnostics` affiche le modèle, la présence de la clé et l’état de DeepSeek Harness et de Free Claude Code. Elle permet de vérifier l’écriture dans l’espace de travail et de déclencher un test du modèle. Si vous effacez vos cookies ou que la session Harness expire, ouvrez la racine du service ou `/_login`.
 
 [Render Free](https://render.com/docs/free) met le service en veille après 15 minutes d’inactivité et efface ses fichiers locaux à l’arrêt ou au redéploiement. Poussez vos modifications sur Git avant de quitter. Le volume de la configuration VPS conserve les projets, conversations et réglages lorsque la conteneurisation est redémarrée.
 
