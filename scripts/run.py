@@ -2,18 +2,18 @@
 
 import json
 import os
-import queue
 import re
 import secrets
 import signal
 import subprocess
 import sys
-import threading
 import time
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from threading import Thread
 from pathlib import Path
 from urllib.error import URLError
-from urllib.parse import urlsplit
-from urllib.request import ProxyHandler, build_opener
+from urllib.parse import urlencode, urlsplit
+from urllib.request import HTTPRedirectHandler, ProxyHandler, Request, build_opener
 
 ROOT = Path(__file__).resolve().parents[1]
 DATA = Path(os.environ.get("DATA_DIR", "/data"))
@@ -24,6 +24,8 @@ PROFILE = DSH_HOME / "profiles" / "web" / "package.json"
 TOKEN_FILE = DATA / "fcc-proxy-token"
 FCC_PORT = 8082
 DSH_PORT = 3080
+TOKEN_PORT = 3082
+RENDER = bool(os.environ.get("RENDER_EXTERNAL_URL"))
 EDGE_PORT = int(os.environ.get("PORT", "10000"))
 CUSTOM_ID = "custom_0c2a18eaf1ab49ab94254580ffecb0a2"
 PROVIDERS = {
@@ -91,10 +93,9 @@ def write_profile():
         patch.write_text("[]\n")
     if PROFILE.exists():
         return
-    bundles = [
-        "@deepseek-ai/dsh-base", "@deepseek-ai/dsh-web-app",
-        *(f"@deepseek-ai/dsh-experimental-{name}" for name in OPTIONAL_BUNDLES),
-    ]
+    optional = ("plugin-market-bundle",) if RENDER else OPTIONAL_BUNDLES
+    bundles = ["@deepseek-ai/dsh-base", "@deepseek-ai/dsh-web-app",
+               *(f"@deepseek-ai/dsh-experimental-{name}" for name in optional)]
     manifest = {"name": "dsh-profile-web", "private": True, "dependencies": {},
                 "dsh": {"profile": {"bundles": bundles}}}
     temporary = PROFILE.with_suffix(".tmp")
@@ -127,9 +128,14 @@ def fcc_environment(include_key=False):
 def model_patch():
     _, _, _, model, context = model_settings()
     filename = DATA / "model.patch.json"
-    # Keep the provider created by fcc-dsh, with the verified context size of
-    # the selected offer (a free Routeway request is limited to 42K tokens).
+    # Route Harness to the same FCC Responses endpoint used by fcc-dsh.
     filename.write_text(json.dumps([{
+        "id": "agent-default-model",
+        "config": {"provider": "free-claude-code", "model": f"{CUSTOM_ID}/{model}"},
+    }, {"id": "llm-deepseek", "disabled": True},
+       {"id": "llm-deepseek-account", "disabled": True},
+       {"id": "tool-web", "disabled": True},
+       {"id": "web-search-deepseek", "disabled": True}, {
         "id": "llm-pi-ai",
         "config": {"providers": {"free-claude-code": {
             "displayName": "Free Claude Code",
@@ -172,32 +178,64 @@ def wait_for_fcc(child):
     raise RuntimeError("Le proxy Free Claude Code n’a pas démarré.")
 
 
-def harness_token(stream, tokens):
+class HarnessLogin(BaseHTTPRequestHandler):
+    boot_token = None
+
+    def do_GET(self):
+        if self.boot_token is None:
+            self.send_error(503, "DeepSeek Harness is starting")
+            return
+        host = self.headers["Host"]
+        request = Request(
+            f"http://127.0.0.1:{DSH_PORT}/?" + urlencode({"token": self.boot_token}),
+            headers={"Host": host},
+        )
+        # Never follow the upstream 303 here: pass the session cookie to the browser.
+        try:
+            with LOGIN_HTTP.open(request, timeout=5) as response:
+                self.send_response(response.status)
+                for name in ("Set-Cookie", "Location", "Cache-Control", "Referrer-Policy"):
+                    if value := response.headers.get(name):
+                        self.send_header(name, value)
+                self.end_headers()
+        except (URLError, TimeoutError):
+            self.send_error(503, "DeepSeek Harness is starting")
+
+    def log_message(self, *_):
+        pass
+
+
+class LoginRedirect(HTTPRedirectHandler):
+    def http_error_303(self, request, response, code, message, headers):
+        return response
+
+
+LOGIN_HTTP = build_opener(ProxyHandler({}), LoginRedirect())
+
+
+def record_harness_token(stream):
     for line in stream:
-        if match := re.search(r"^dsh web: https?://[^\s?]+/\?token=([A-Za-z0-9_-]{43})\s*$", line):
-            tokens.put(match.group(1))
+        match = re.search(r"^dsh web: https?://[^\s?]+/\?token=([A-Za-z0-9_-]{43})\s*$", line)
+        if match:
+            HarnessLogin.boot_token = match.group(1)
         else:
             print(re.sub(r"([?&]token=)[A-Za-z0-9_-]+", r"\1[masqué]", line), end="", flush=True)
 
 
 def start_harness(origin, authority):
-    tokens = queue.Queue()
+    env = child_environment() | {"FCC_DSH_API_KEY": TOKEN_FILE.read_text().strip()}
+    if RENDER:
+        env["NODE_OPTIONS"] = "--max-old-space-size=180 --max-semi-space-size=2"
+    command = ["dsh", "web", "--patch", str(model_patch())]
+    if not RENDER:
+        command.extend(["--patch", str(ROOT / "config" / "harness.patch.yml")])
     child = start(
-        ["fcc-dsh", "web", "--patch", str(model_patch()),
-         "--patch", str(ROOT / "config" / "harness.patch.yml"),
-         "--no-open", "--host", "127.0.0.1", "--port", str(DSH_PORT),
+        [*command, "--no-open", "--host", "127.0.0.1", "--port", str(DSH_PORT),
          "--public-url", origin, "--trusted-host", authority],
-        fcc_environment(), stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-        text=True, errors="replace",
+        env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, errors="replace",
     )
-    threading.Thread(target=harness_token, args=(child.stdout, tokens), daemon=True).start()
-    deadline = time.monotonic() + 120
-    while child.poll() is None and time.monotonic() < deadline:
-        try:
-            return tokens.get(timeout=0.5)
-        except queue.Empty:
-            pass
-    raise RuntimeError("DeepSeek Harness n’a pas ouvert son interface Web.")
+    Thread(target=record_harness_token, args=(child.stdout,), daemon=True).start()
+    return child
 
 
 def run():
@@ -206,14 +244,6 @@ def run():
     for path in (DATA, HOME, WORKSPACE):
         path.mkdir(parents=True, exist_ok=True)
     env = child_environment()
-    if password:
-        write_profile()
-        if not TOKEN_FILE.exists():
-            TOKEN_FILE.write_text(secrets.token_urlsafe(32))
-        wait_for_fcc(start(["fcc-server"], fcc_environment(include_key=True)))
-        boot_token = start_harness(origin, authority)
-    else:
-        boot_token = secrets.token_urlsafe(32)
 
     password_hash = subprocess.run(
         ["caddy", "hash-password", "--algorithm", "bcrypt", "--bcrypt-cost", "10"],
@@ -224,11 +254,20 @@ def run():
     child = start(["caddy", "run", "--config", str(ROOT / "config" / "Caddyfile"), "--adapter", "caddyfile"], env | {
         "EDGE_PORT": str(EDGE_PORT), "EDGE_HOST": authority.split(":")[0],
         "EDGE_USER": user, "EDGE_PASSWORD_HASH": password_hash, "EDGE_STATUS": status,
-        "EDGE_LOCKED": "no" if password else "yes", "DSH_BOOT_TOKEN": boot_token,
-        "DSH_PORT": str(DSH_PORT),
+        "EDGE_LOCKED": "no" if password else "yes",
+        "DSH_PORT": str(DSH_PORT), "DSH_LOGIN_PORT": str(TOKEN_PORT),
+        "GOGC": "70", "GOMEMLIMIT": "28MiB",
         "EDGE_COOKIE_DIRECTIVE": r'header_down Set-Cookie "^(.+)$" "${1}; Secure"' if protocol == "https" else "",
     })
     print(f"Interface {origin} · {status}" if password else "Interface verrouillée : renseigner WEB_PASSWORD.", flush=True)
+    if password:
+        write_profile()
+        if not TOKEN_FILE.exists():
+            TOKEN_FILE.write_text(secrets.token_urlsafe(32))
+        login = ThreadingHTTPServer(("127.0.0.1", TOKEN_PORT), HarnessLogin)
+        Thread(target=login.serve_forever, daemon=True).start()
+        wait_for_fcc(start(["fcc-server"], fcc_environment(include_key=True)))
+        start_harness(origin, authority)
     while all(process.poll() is None for process in PROCESSES):
         time.sleep(0.5)
     raise RuntimeError(f"Un des services s’est arrêté (proxy HTTP : {child.poll()}).")

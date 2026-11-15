@@ -1,5 +1,11 @@
 {
 	admin off
+	log {
+		level WARN
+		format filter {
+			request>uri delete
+		}
+	}
 	persist_config off
 	auto_https off
 }
@@ -40,15 +46,16 @@ http://:{$EDGE_PORT} {
 		@status path /_status
 		respond @status "{$EDGE_STATUS}" 200
 
-		@login path /_login
-		rewrite @login /?token={$DSH_BOOT_TOKEN}
-
-		@firstVisit {
+		@newSession {
 			method GET
-			path /
-			not header_regexp Cookie "(^|;[ ]*)dsh-auth-"
+			path /_login /
+			expression {http.request.uri.path} == "/_login" || !{http.request.header.Cookie}.contains("dsh-auth-")
 		}
-		rewrite @firstVisit /?token={$DSH_BOOT_TOKEN}
+		reverse_proxy @newSession 127.0.0.1:{$DSH_LOGIN_PORT} {
+			header_up -Authorization
+			header_up -Cookie
+			{$EDGE_COOKIE_DIRECTIVE}
+		}
 
 		reverse_proxy 127.0.0.1:{$DSH_PORT} {
 			header_up -Authorization
@@ -61,7 +68,6 @@ http://:{$EDGE_PORT} {
 				@home {
 					method GET
 					path /
-					not query token=*
 				}
 				redir @home /_login 303
 				copy_response

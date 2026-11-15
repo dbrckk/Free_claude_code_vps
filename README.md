@@ -4,7 +4,7 @@ Interface Web officielle de DeepSeek Harness avec le proxy Free Claude Code. Uti
 
 ## Render
 
-Le service utilise Docker et le plan Free. Dans **Environment**, ajoutez `WEB_PASSWORD` (16 à 72 octets) et `ROUTEWAY_API_KEY` (depuis le [tableau de bord Routeway](https://routeway.ai/)), puis choisissez **Save, rebuild, and deploy**. Ouvrez l’URL HTTPS du service et connectez-vous avec l’identifiant `admin` et ce mot de passe. `WEB_USERNAME` permet de changer l’identifiant.
+Le service utilise Docker et le plan Free. Dans **Environment**, ajoutez `ROUTEWAY_API_KEY` (depuis le [tableau de bord Routeway](https://routeway.ai/)) et renseignez `WEB_PASSWORD` (16 à 72 octets) si le service ne dispose pas déjà d’un mot de passe, puis choisissez **Save, rebuild, and deploy**. Ouvrez l’URL HTTPS du service et connectez-vous avec l’identifiant `admin` et ce mot de passe. `WEB_USERNAME` permet de changer l’identifiant.
 
 La page `/_status` affiche le fournisseur et l’état de la configuration de la clé, sans afficher sa valeur. Si vous effacez vos cookies ou que la session Harness expire, ouvrez la racine du service ou `/_login`.
 
@@ -52,9 +52,9 @@ Le fournisseur choisi reçoit les requêtes. Aucun changement automatique de mod
 
 ## Plugins
 
-Le profil Web est initialisé avec neuf bundles officiels additionnels. Il inclut les extensions de recherche des sessions, de terminal persistant, de gestion des worktrees et changements Git, de saisie vocale, de révision automatique, de boucles de travail, de traduction, de badges et de découverte de plugins. La saisie vocale peut télécharger ses ressources à la première utilisation. La traduction de raisonnement et la révision automatique ont leurs propres réglages. Activez ces modes selon vos besoins.
+La configuration VPS initialise le profil Web avec neuf bundles officiels additionnels. Il inclut les extensions de recherche des sessions, de terminal persistant, de gestion des worktrees et changements Git, de saisie vocale, de révision automatique, de boucles de travail, de traduction, de badges et de découverte de plugins. La saisie vocale peut télécharger ses ressources à la première utilisation. La traduction de raisonnement et la révision automatique ont leurs propres réglages. Activez ces modes selon vos besoins.
 
-Deux serveurs MCP locaux sont branchés au profil : mémoire persistante et réflexion séquentielle. Les outils de code, les fichiers, les sessions et les extensions Office sont fournis par le profil Web. Ouvrez **Plugins** ou **Settings → MCP** pour voir les intégrations. Le menu **Discover** accepte un index HTTPS de plugins que vous avez choisi. Le cloud gratuit dispose de 512 Mo de RAM et convient aux sessions légères. Les gros projets, les tâches parallèles et les extensions gourmandes sont mieux adaptés au VPS.
+Deux serveurs MCP locaux sont branchés au profil VPS : mémoire persistante et réflexion séquentielle. Les outils de code, les fichiers, les sessions et les extensions Office sont fournis par le profil Web. Ouvrez **Plugins** ou **Settings → MCP** pour voir les intégrations. Le menu **Discover** accepte un index HTTPS de plugins que vous avez choisi. Sur Render Free (512 Mo de RAM), la marketplace est activée au démarrage. Les autres bundles sont installés dans l’image et peuvent être activés selon la mémoire disponible. Les deux processus MCP locaux sont lancés sur le VPS. Les gros projets, les tâches parallèles et les extensions gourmandes sont mieux adaptés au VPS.
 
 ## Vérifier le service
 
