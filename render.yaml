@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: free-claude-code-vps
+    runtime: docker
+    plan: free
+    region: frankfurt
+    healthCheckPath: /healthz
+    envVars:
+      - key: WEB_PASSWORD
+        sync: false
+      - key: ROUTEWAY_API_KEY
+        sync: false

@@ -1,0 +1,21 @@
+# FCC's launcher provides the model route. Retain the profile's local credentials
+# so the browser session and any MCP credentials can survive a VPS restart.
+- id: credentials
+  config: {}
+- insert:
+    - id: memory-mcp-reference
+      name: '@deepseek-ai/dsh-mcp-client'
+      config:
+        serverName: reference_memory
+        transport: stdio
+        command: mcp-server-memory
+        env:
+          MEMORY_FILE_PATH: !!js dshHomePath('memory.jsonl')
+    - id: sequential-thinking-mcp
+      name: '@deepseek-ai/dsh-mcp-client'
+      config:
+        serverName: sequential_thinking
+        transport: stdio
+        command: mcp-server-sequential-thinking
+        env:
+          DISABLE_THOUGHT_LOGGING: 'true'

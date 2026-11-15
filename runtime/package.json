@@ -1,0 +1,18 @@
+{
+  "dependencies": {
+    "@anthropic-ai/claude-code": "2.1.325",
+    "@deepseek-ai/dsh": "0.2.2-rc.1",
+    "@deepseek-ai/dsh-experimental-auto-review": "0.2.2-rc.1",
+    "@deepseek-ai/dsh-experimental-badge-skill-bundle": "0.2.2-rc.1",
+    "@deepseek-ai/dsh-experimental-cot-translation-bundle": "0.2.2-rc.1",
+    "@deepseek-ai/dsh-experimental-forge-bundle": "0.2.2-rc.1",
+    "@deepseek-ai/dsh-experimental-plugin-market-bundle": "0.2.2-rc.1",
+    "@deepseek-ai/dsh-experimental-ralph-bundle": "0.2.2-rc.1",
+    "@deepseek-ai/dsh-experimental-session-search": "0.2.2-rc.1",
+    "@deepseek-ai/dsh-experimental-terminal-bundle": "0.2.2-rc.1",
+    "@deepseek-ai/dsh-experimental-voice-input-bundle": "0.2.2-rc.1",
+    "@modelcontextprotocol/server-memory": "2026.7.4",
+    "@modelcontextprotocol/server-sequential-thinking": "2025.7.1",
+    "pnpm": "10.33.4"
+  }
+}

@@ -1,0 +1,52 @@
+{
+	admin off
+	persist_config off
+	auto_https off
+}
+
+http://:{$EDGE_PORT} {
+	route {
+		@health path /healthz
+		respond @health "ok" 200
+
+		@wrongHost not host {$EDGE_HOST}
+		respond @wrongHost 421
+
+		@crossSite header Sec-Fetch-Site cross-site
+		respond @crossSite 403
+
+		header {
+			-Server
+			Referrer-Policy no-referrer
+			X-Content-Type-Options nosniff
+			X-Frame-Options DENY
+		}
+
+		@disabled expression `"{$EDGE_LOCKED}" == "yes"`
+		respond @disabled "Configuration requise dans les variables d’environnement du serveur." 503
+
+		basic_auth {
+			{$EDGE_USER} {$EDGE_PASSWORD_HASH}
+		}
+
+		@status path /_status
+		respond @status "{$EDGE_STATUS}" 200
+
+		@login path /_login
+		rewrite @login /?token={$DSH_BOOT_TOKEN}
+
+		@firstVisit {
+			method GET
+			path /
+			not header_regexp Cookie "(^|;[ ]*)dsh-auth-"
+		}
+		rewrite @firstVisit /?token={$DSH_BOOT_TOKEN}
+
+		reverse_proxy 127.0.0.1:{$DSH_PORT} {
+			header_up -Authorization
+			header_up -Proxy-Authorization
+			{$EDGE_COOKIE_DIRECTIVE}
+			flush_interval -1
+		}
+	}
+}

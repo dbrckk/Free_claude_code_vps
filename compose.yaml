@@ -1,0 +1,18 @@
+services:
+  harness:
+    build: .
+    init: true
+    env_file: .env
+    ports:
+      - "127.0.0.1:8080:10000"
+    volumes:
+      - harness-data:/data
+    restart: unless-stopped
+    stop_grace_period: 25s
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+
+volumes:
+  harness-data:
