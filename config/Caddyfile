@@ -12,7 +12,15 @@ http://:{$EDGE_PORT} {
 		@wrongHost not host {$EDGE_HOST}
 		respond @wrongHost 421
 
-		@crossSite header Sec-Fetch-Site cross-site
+		@crossSite {
+			header Sec-Fetch-Site cross-site
+			not {
+				method GET
+				path /
+				header Sec-Fetch-Mode navigate
+				header_regexp Sec-Fetch-Dest ^document$
+			}
+		}
 		respond @crossSite 403
 
 		header {
@@ -47,6 +55,17 @@ http://:{$EDGE_PORT} {
 			header_up -Proxy-Authorization
 			{$EDGE_COOKIE_DIRECTIVE}
 			flush_interval -1
+
+			@expiredSession status 401
+			handle_response @expiredSession {
+				@home {
+					method GET
+					path /
+					not query token=*
+				}
+				redir @home /_login 303
+				copy_response
+			}
 		}
 	}
 }
