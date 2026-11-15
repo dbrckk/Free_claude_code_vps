@@ -1,6 +1,8 @@
 services:
   harness:
-    build: .
+    build:
+      context: .
+      target: vps
     init: true
     env_file: .env
     ports:

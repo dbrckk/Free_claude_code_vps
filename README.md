@@ -56,6 +56,29 @@ La configuration VPS initialise le profil Web avec neuf bundles officiels additi
 
 Deux serveurs MCP locaux sont branchés au profil VPS : mémoire persistante et réflexion séquentielle. Les outils de code, les fichiers, les sessions et les extensions Office sont fournis par le profil Web. Ouvrez **Plugins** ou **Settings → MCP** pour voir les intégrations. Le menu **Discover** accepte un index HTTPS de plugins que vous avez choisi. Sur Render Free (512 Mo de RAM), la marketplace est activée au démarrage. Les autres bundles sont installés dans l’image et peuvent être activés selon la mémoire disponible. Les deux processus MCP locaux sont lancés sur le VPS. Les gros projets, les tâches parallèles et les extensions gourmandes sont mieux adaptés au VPS.
 
+## Outils pour les dépôts GitHub
+
+L’image contient Python 3.12.14 pour les projets, avec uv pour isoler leurs dépendances. Le service Free Claude Code utilise Python 3.14. L’environnement fournit aussi Node.js, Git, GitHub CLI, FFmpeg, FFprobe, eSpeak NG, Rojo 7.7.1, Luau 0.744, ast-grep, Repomix et ShellCheck.
+
+| Projet | Vérification disponible |
+| --- | --- |
+| Roblox-shooter et Chaos Survival | Build Rojo et compilation Luau. Les playtests Studio et la publication utilisent leurs workflows Roblox. |
+| DAEU B, Spotify-montre et sites | Vérifications Node. Le profil VPS comprend Chromium pour les parcours navigateur. Utilisez la version de Playwright déclarée par le dépôt ou son workflow. |
+| Automate-ytb et production verticale | FFmpeg, FFprobe, eSpeak NG et polices DejaVu. Blender est inclus sur le VPS. Les modèles vocaux et GPU sont gérés par les projets concernés. |
+| Jumpy Frog, Jelly Bricks et jeux Android | Godot 4.5.1 headless et JDK 17 sur le VPS. Les versions Android SDK, Gradle, émulateur et la signature sont gérées par les workflows des jeux. |
+| Production-OS et Asset Forge | Python 3.12, uv, Git, FFmpeg et analyse de code. Les bibliothèques et services propres à chaque projet sont installés à partir de ses manifestes. |
+
+Depuis le terminal du projet dans Harness :
+
+```bash
+portfolio-doctor
+star-list "roblox luau PBR assets" --top 5 --websites --top-websites 3
+star-list "responsive web accessibility" --skills --top-skills 5 --json
+uv venv --python /opt/python312/bin/python3.12
+```
+
+Les deux compétences `star-list` et `portfolio-development` sont disponibles dans Harness. Le catalogue embarqué correspond à une révision épinglée de [star-list](https://github.com/dbrckk/star-list), contrôlée à la construction. Les références de Skill Issue, Scenario et autres sites restent consultables comme sources. Repomix conserve son contrôle de secrets activé par défaut.
+
 ## Vérifier le service
 
 `/healthz` confirme la disponibilité du point d’entrée. `/_status` vérifie que la clé du fournisseur sélectionné est renseignée. Pour vérifier l’inférence, démarrez une nouvelle session, envoyez « Réponds uniquement OK », puis demandez de créer et relire un fichier dans l’espace de travail.

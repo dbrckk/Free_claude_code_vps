@@ -1,0 +1,60 @@
+#!/usr/bin/env python3.12
+"""Show project indicators and installed tools without running project code."""
+
+import argparse
+import json
+import shutil
+from pathlib import Path
+
+PROJECT_SIGNALS = {
+    "Web / JavaScript": ("package.json", "app/package.json", "commerce/package.json", "wrangler.toml"),
+    "Python": ("pyproject.toml", ".python-version", "requirements.txt"),
+    "Roblox": ("default.project.json", "rokit.toml", "aftman.toml"),
+    "Godot": ("project.godot", "godot/project.godot", "native-godot/project.godot"),
+    "Android": ("build.gradle", "build.gradle.kts", "gradlew", "export_presets.cfg"),
+    "Vidéo": ("requirements-voice.txt", "automate_ytb", "video_requests", "storyboard.py"),
+    "Contexte partagé": ("AGENTS.md", ".ai/commands.json", ".repo-standards.yml"),
+    "GitHub Actions": (".github/workflows",),
+}
+TOOLS = {
+    "Compilation": ("git", "gh", "node", "npm", "pnpm", "python3.12", "uv"),
+    "Code": ("rg", "ast-grep", "repomix", "star-list", "shellcheck"),
+    "Roblox": ("rojo", "luau", "luau-compile", "luau-analyze"),
+    "Médias": ("ffmpeg", "ffprobe", "espeak-ng", "blender"),
+    "VPS": ("chromium", "godot", "java"),
+}
+
+
+def repository_root(path):
+    for parent in (path, *path.parents):
+        if (parent / ".git").exists():
+            return parent
+    return path
+
+
+def main():
+    cli = argparse.ArgumentParser(description=__doc__)
+    cli.add_argument("directory", nargs="?", default=".")
+    cli.add_argument("--json", action="store_true")
+    args = cli.parse_args()
+    path = Path(args.directory).resolve()
+    if not path.is_dir():
+        cli.error(f"Répertoire introuvable : {path}")
+    root = repository_root(path)
+    signals = {label: [p for p in paths if (root / p).exists()] for label, paths in PROJECT_SIGNALS.items()}
+    tools = {label: {name: shutil.which(name) for name in names} for label, names in TOOLS.items()}
+    result = {"project": str(root), "signals": {k: v for k, v in signals.items() if v}, "tools": tools}
+    if args.json:
+        print(json.dumps(result, ensure_ascii=False, indent=2))
+    else:
+        print(f"Projet : {root}")
+        for label, paths in result["signals"].items():
+            print(f"  {label} : {', '.join(paths)}")
+        for label, entries in tools.items():
+            detail = ", ".join(name + ("" if target else " (absent)") for name, target in entries.items())
+            print(f"{label} : {detail}")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
