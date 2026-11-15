@@ -22,6 +22,7 @@ DSH_HOME = HOME / ".dsh"
 WORKSPACE = DATA / "workspace"
 PROFILE = DSH_HOME / "profiles" / "web" / "package.json"
 TOKEN_FILE = DATA / "fcc-proxy-token"
+FCC_CONFIG = HOME / ".fcc" / ".env"
 FCC_PORT = 8082
 DSH_PORT = 3080
 TOKEN_PORT = 3082
@@ -105,7 +106,6 @@ def write_profile():
 
 def fcc_environment(include_key=False):
     _, key, base, model, _ = model_settings()
-    token = TOKEN_FILE.read_text().strip()
     provider = {
         "provider_id": CUSTOM_ID, "display_name": "DeepSeek V4.1 Flash",
         "base_url": base, "api_format": "openai_chat",
@@ -115,14 +115,28 @@ def fcc_environment(include_key=False):
         provider["api_keys"] = [key]
     return child_environment() | {
         "HOST": "127.0.0.1", "PORT": str(FCC_PORT), "FCC_OPEN_BROWSER": "false",
-        "FCC_ENV_FILE": str(HOME / ".fcc" / ".env"),
-        "PROXY_AUTH_ENABLED": "true", "ANTHROPIC_AUTH_TOKEN": token,
+        "FCC_ENV_FILE": str(FCC_CONFIG),
+        "PROXY_AUTH_ENABLED": "true",
         "FCC_CUSTOM_PROVIDERS": json.dumps([provider]),
         "MODEL": f"{CUSTOM_ID}/{model}", "MODEL_FALLBACKS": "[]",
         "LOG_RAW_API_PAYLOADS": "false", "LOG_RAW_SSE_EVENTS": "false",
         "OTEL_SDK_DISABLED": "true", "DISABLE_TELEMETRY": "1",
         "DISABLE_NONESSENTIAL_TRAFFIC": "1",
     }
+
+
+def configure_fcc():
+    config_dir = FCC_CONFIG.parent
+    config_dir.mkdir(parents=True, exist_ok=True)
+    if not TOKEN_FILE.exists():
+        TOKEN_FILE.write_text(secrets.token_urlsafe(32))
+    token = TOKEN_FILE.read_text().strip()
+    existing = FCC_CONFIG.read_text().splitlines() if FCC_CONFIG.exists() else ["FCC_CONFIG_SCHEMA=2"]
+    lines = [line for line in existing if not re.match(r"^\s*(?:export\s+)?ANTHROPIC_AUTH_TOKEN\s*=", line)]
+    lines.append(f"ANTHROPIC_AUTH_TOKEN={token}")
+    temporary = FCC_CONFIG.with_name(".deploy.env")
+    temporary.write_text("\n".join(lines) + "\n")
+    temporary.replace(FCC_CONFIG)
 
 
 def model_patch():
@@ -262,8 +276,7 @@ def run():
     print(f"Interface {origin} · {status}" if password else "Interface verrouillée : renseigner WEB_PASSWORD.", flush=True)
     if password:
         write_profile()
-        if not TOKEN_FILE.exists():
-            TOKEN_FILE.write_text(secrets.token_urlsafe(32))
+        configure_fcc()
         login = ThreadingHTTPServer(("127.0.0.1", TOKEN_PORT), HarnessLogin)
         Thread(target=login.serve_forever, daemon=True).start()
         wait_for_fcc(start(["fcc-server"], fcc_environment(include_key=True)))
