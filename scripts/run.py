@@ -15,6 +15,8 @@ from urllib.error import URLError
 from urllib.parse import urlencode, urlsplit
 from urllib.request import HTTPRedirectHandler, ProxyHandler, Request, build_opener
 
+from diagnostics import Diagnostics
+
 ROOT = Path(__file__).resolve().parents[1]
 DATA = Path(os.environ.get("DATA_DIR", "/data"))
 HOME = DATA / "home"
@@ -194,8 +196,17 @@ def wait_for_fcc(child):
 
 class HarnessLogin(BaseHTTPRequestHandler):
     boot_token = None
+    diagnostics = None
 
     def do_GET(self):
+        path = urlsplit(self.path).path
+        if path in ("/_diagnostics", "/_diagnostics/state", "/_diagnostics/app.js", "/_diagnostics/style.css"):
+            ready = self.boot_token is not None if path.endswith("/state") else False
+            self.diagnostics.get(self, path, ready)
+            return
+        if path not in ("/", "/_login"):
+            self.send_error(404)
+            return
         if self.boot_token is None:
             self.send_error(503, "DeepSeek Harness is starting")
             return
@@ -214,6 +225,13 @@ class HarnessLogin(BaseHTTPRequestHandler):
                 self.end_headers()
         except (URLError, TimeoutError):
             self.send_error(503, "DeepSeek Harness is starting")
+
+    def do_POST(self):
+        path = urlsplit(self.path).path
+        if path in ("/_diagnostics/workspace", "/_diagnostics/model"):
+            self.diagnostics.post(self, path)
+        else:
+            self.send_error(404)
 
     def log_message(self, *_):
         pass
@@ -254,7 +272,7 @@ def start_harness(origin, authority):
 
 def run():
     origin, authority, protocol, user, password = edge_settings()
-    selected, key, *_ = model_settings()
+    selected, key, _, model, _ = model_settings()
     for path in (DATA, HOME, WORKSPACE):
         path.mkdir(parents=True, exist_ok=True)
     env = child_environment()
@@ -277,6 +295,9 @@ def run():
     if password:
         write_profile()
         configure_fcc()
+        HarnessLogin.diagnostics = Diagnostics(
+            origin, selected, bool(key), f"{CUSTOM_ID}/{model}", WORKSPACE, TOKEN_FILE, FCC_PORT, HTTP,
+        )
         login = ThreadingHTTPServer(("127.0.0.1", TOKEN_PORT), HarnessLogin)
         Thread(target=login.serve_forever, daemon=True).start()
         wait_for_fcc(start(["fcc-server"], fcc_environment(include_key=True)))

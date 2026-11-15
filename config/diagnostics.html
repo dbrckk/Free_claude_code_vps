@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light dark">
+    <title>Diagnostic · Free Claude Code</title>
+    <link rel="stylesheet" href="/_diagnostics/style.css">
+    <script src="/_diagnostics/app.js" defer></script>
+  </head>
+  <body>
+    <main>
+      <a href="/">← Ouvrir DeepSeek Harness</a>
+      <h1>Diagnostic du serveur</h1>
+      <dl>
+        <dt>Fournisseur</dt><dd id="provider">Vérification…</dd>
+        <dt>Modèle</dt><dd id="model">Vérification…</dd>
+        <dt>Clé API</dt><dd id="key">Vérification…</dd>
+        <dt>DeepSeek Harness</dt><dd id="harness">Vérification…</dd>
+        <dt>Free Claude Code</dt><dd id="proxy">Vérification…</dd>
+      </dl>
+      <p id="setup" hidden>Ajoute la clé API du fournisseur dans les variables d’environnement du serveur, puis redéploie.</p>
+      <div class="actions">
+        <button id="refresh" type="button">Actualiser</button>
+        <button id="workspace" type="button">Tester les fichiers</button>
+        <button id="probe" type="button" disabled>Tester DeepSeek</button>
+      </div>
+      <p id="result" role="status" aria-live="polite"></p>
+      <p class="note">Le test DeepSeek envoie une requête courte et compte dans le quota du fournisseur.</p>
+    </main>
+  </body>
+</html>

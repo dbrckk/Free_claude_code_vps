@@ -6,7 +6,7 @@ Interface Web officielle de DeepSeek Harness avec le proxy Free Claude Code. Uti
 
 Le service utilise Docker et le plan Free. Dans **Environment**, ajoutez `ROUTEWAY_API_KEY` (depuis le [tableau de bord Routeway](https://routeway.ai/)) et renseignez `WEB_PASSWORD` (16 à 72 octets) si le service ne dispose pas déjà d’un mot de passe, puis choisissez **Save, rebuild, and deploy**. Ouvrez l’URL HTTPS du service et connectez-vous avec l’identifiant `admin` et ce mot de passe. `WEB_USERNAME` permet de changer l’identifiant.
 
-La page `/_status` affiche le fournisseur et l’état de la configuration de la clé, sans afficher sa valeur. Si vous effacez vos cookies ou que la session Harness expire, ouvrez la racine du service ou `/_login`.
+La page `/_diagnostics` affiche le modèle, la présence de la clé et l’état de DeepSeek Harness et de Free Claude Code. Elle permet de vérifier l’écriture dans l’espace de travail et de déclencher un test du modèle. Si vous effacez vos cookies ou que la session Harness expire, ouvrez la racine du service ou `/_login`.
 
 [Render Free](https://render.com/docs/free) met le service en veille après 15 minutes d’inactivité et efface ses fichiers locaux à l’arrêt ou au redéploiement. Poussez vos modifications sur Git avant de quitter. Le volume de la configuration VPS conserve les projets, conversations et réglages lorsque la conteneurisation est redémarrée.
 
@@ -81,6 +81,6 @@ Les deux compétences `star-list` et `portfolio-development` sont disponibles da
 
 ## Vérifier le service
 
-`/healthz` confirme la disponibilité du point d’entrée. `/_status` vérifie que la clé du fournisseur sélectionné est renseignée. Pour vérifier l’inférence, démarrez une nouvelle session, envoyez « Réponds uniquement OK », puis demandez de créer et relire un fichier dans l’espace de travail.
+`/healthz` confirme la disponibilité du point d’entrée. `/_diagnostics` est protégée par le même mot de passe que Harness. **Tester les fichiers** crée et relit un fichier temporaire, puis le supprime. **Tester DeepSeek** envoie une requête courte au modèle via le proxy. Ce test consomme une requête du quota et distingue les échecs d’accès, de quota et de disponibilité lorsque le fournisseur renvoie le code correspondant. Pour vérifier ensuite les outils de l’agent, ouvrez une nouvelle session Harness et demandez-lui de créer et relire un fichier dans l’espace de travail.
 
 Sources amont : [Free Claude Code](https://github.com/Alishahryar1/free-claude-code) et [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness). Le conteneur installe leurs distributions officielles épinglées.
