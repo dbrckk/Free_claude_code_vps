@@ -65,7 +65,7 @@ L’image contient Python 3.12.14 pour les projets, avec uv pour isoler leurs d�
 | Roblox-shooter et Chaos Survival | Build Rojo et compilation Luau. Les playtests Studio et la publication utilisent leurs workflows Roblox. |
 | DAEU B, Spotify-montre et sites | Vérifications Node. Le profil VPS comprend Chromium pour les parcours navigateur. Utilisez la version de Playwright déclarée par le dépôt ou son workflow. |
 | Automate-ytb et production verticale | FFmpeg, FFprobe, eSpeak NG et polices DejaVu. Blender est inclus sur le VPS. Les modèles vocaux et GPU sont gérés par les projets concernés. |
-| Jumpy Frog, Jelly Bricks et jeux Android | Godot 4.5.1 headless et JDK 17 sur le VPS. Les versions Android SDK, Gradle, émulateur et la signature sont gérées par les workflows des jeux. |
+| Jumpy Frog, Jelly Bricks et jeux Android | Godot headless et JDK 17 sur le VPS. Utilisez `godot-4.5.1` pour Jumpy Frog et `godot-4.6` pour Jelly Bricks. Les versions Android SDK, Gradle, émulateur et la signature sont gérées par les workflows des jeux. |
 | Production-OS et Asset Forge | Python 3.12, uv, Git, FFmpeg et analyse de code. Les bibliothèques et services propres à chaque projet sont installés à partir de ses manifestes. |
 
 Depuis le terminal du projet dans Harness :

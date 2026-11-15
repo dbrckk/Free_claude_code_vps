@@ -88,10 +88,10 @@ USER root
 RUN apt-get update \
     && apt-get install -y --no-install-recommends blender chromium fonts-liberation libasound2t64 libfontconfig1 libgl1 libx11-6 libxcursor1 libxi6 libxinerama1 libxrandr2 libxrender1 \
     && rm -rf /var/lib/apt/lists/*
-COPY --from=godot-tool /godot/godot /usr/local/bin/godot
+COPY --from=godot-tool /godot/ /usr/local/bin/
 COPY --from=java /opt/java/openjdk /opt/java/openjdk
 ENV JAVA_HOME=/opt/java/openjdk PATH="/opt/java/openjdk/bin:${PATH}" CHROME_PATH=/usr/bin/chromium
-RUN godot --version && java -version
+RUN godot-4.5.1 --version && godot-4.6 --version && java -version
 USER harness
 
 FROM base AS render

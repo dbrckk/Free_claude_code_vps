@@ -18,14 +18,16 @@ case "$arch" in
         uv_checksum=c5221ff41b7892bfc223543883600125f6a47fe845093e0f5bdff4f359196d83
         rojo_checksum=00feb4fa0829a1dd72b49df2639da519a352bfe13cadcd83969e2ba2bb5693c4
         godot_arch=x86_64
-        godot_checksum=02ec53d1cc7dbb9cc6355393c61b9ab43d1244751a124f10248a4802830788cd
+        godot46_checksum=6bcc59dfd1d670e918c77eae06e82b9dc5699de13d353dc3a4b3b6b307b6dc06
+        godot45_checksum=02ec53d1cc7dbb9cc6355393c61b9ab43d1244751a124f10248a4802830788cd
         ;;
     arm64)
         machine=aarch64
         uv_checksum=71279f8d3c67241e807b9d8db872d1bf541579fb9f08b7d1eb1682196d1e57dc
         rojo_checksum=7190d4bcfd95b4d6d37d8c0837f4a52acaec096cdf10417918559d26535dcf77
         godot_arch=arm64
-        godot_checksum=4a2c6bd5066aca9d207c75f540645e29272b129f2cf321d8ba30d922af11b00f
+        godot46_checksum=6c4bcb78a760f4b3bd958d0ca92496b0d5929540a0d29b0f315087a96226714a
+        godot45_checksum=4a2c6bd5066aca9d207c75f540645e29272b129f2cf321d8ba30d922af11b00f
         ;;
     *) echo "Unsupported architecture: $arch" >&2; exit 1 ;;
 esac
@@ -50,10 +52,16 @@ case "${3:-core}" in
         chmod 0755 "$out"/uv "$out"/uvx "$out"/rojo "$out"/luau "$out"/luau-compile "$out"/luau-analyze
         ;;
     godot)
-        archive="Godot_v4.5.1-stable_linux.$godot_arch"
-        download "https://github.com/godotengine/godot/releases/download/4.5.1-stable/$archive.zip" "$godot_checksum" godot.zip
-        unzip -p "$temp/godot.zip" "$archive" > "$out/godot"
-        chmod 0755 "$out/godot"
+        godot() {
+            version=$1
+            archive="Godot_v$version-stable_linux.$godot_arch"
+            download "https://github.com/godotengine/godot/releases/download/$version-stable/$archive.zip" "$2" godot.zip
+            unzip -p "$temp/godot.zip" "$archive" > "$out/godot-$version"
+            chmod 0755 "$out/godot-$version"
+        }
+        godot 4.5.1 "$godot45_checksum"
+        godot 4.6 "$godot46_checksum"
+        ln -s godot-4.6 "$out/godot"
         ;;
     *) exit 1 ;;
 esac
