@@ -16,6 +16,7 @@ from urllib.parse import urlencode, urlsplit
 from urllib.request import HTTPRedirectHandler, ProxyHandler, Request, build_opener
 
 from diagnostics import Diagnostics
+from free_router import KEY_NAME, MODEL, PORT as OPENROUTER_PORT, start_free_router
 
 ROOT = Path(__file__).resolve().parents[1]
 DATA = Path(os.environ.get("DATA_DIR", "/data"))
@@ -31,12 +32,7 @@ TOKEN_PORT = 3082
 RENDER = bool(os.environ.get("RENDER_EXTERNAL_URL"))
 EDGE_PORT = int(os.environ.get("PORT", "10000"))
 CUSTOM_ID = "custom_0c2a18eaf1ab49ab94254580ffecb0a2"
-PROVIDERS = {
-    "routeway": ("ROUTEWAY_API_KEY", "https://api.routeway.ai/v1", "deepseek-v4.1-flash:free", 42000),
-    "unorouter": ("UNOROUTER_API_KEY", "https://api.unorouter.com/v1", "deepseek-v4.1-flash-1017:free", 1000000),
-    "openrouter": ("OPENROUTER_API_KEY", "https://openrouter.ai/api/v1", "deepseek/deepseek-v4.1-flash-1017:free", 1000000),
-    "deepseek": ("DEEPSEEK_API_KEY", "https://api.deepseek.com", "deepseek-flash", 1000000),
-}
+MODEL_REF = f"{CUSTOM_ID}/{MODEL}"
 OPTIONAL_BUNDLES = (
     "plugin-market-bundle", "session-search", "terminal-bundle", "forge-bundle",
     "voice-input-bundle", "ralph-bundle", "auto-review", "badge-skill-bundle",
@@ -47,7 +43,10 @@ PROCESSES = []
 
 
 def child_environment():
-    excluded = {"WEB_PASSWORD", *(row[0] for row in PROVIDERS.values())}
+    excluded = {
+        "WEB_PASSWORD", KEY_NAME, "OPEN_ROUTER_API_KEY",
+        "ROUTEWAY_API_KEY", "UNOROUTER_API_KEY", "DEEPSEEK_API_KEY",
+    }
     env = {key: value for key, value in os.environ.items() if key not in excluded}
     env.update(
         HOME=str(HOME),
@@ -81,14 +80,6 @@ def edge_settings():
     return origin, parsed.netloc, parsed.scheme, user, password
 
 
-def model_settings():
-    selected = os.environ.get("MODEL_PROVIDER", "routeway")
-    if selected not in PROVIDERS:
-        raise ValueError("MODEL_PROVIDER doit être routeway, unorouter, openrouter ou deepseek.")
-    key_name, base, model, context = PROVIDERS[selected]
-    return selected, os.environ.get(key_name, "").strip(), base, model, context
-
-
 def write_profile():
     PROFILE.parent.mkdir(parents=True, exist_ok=True)
     patch = PROFILE.parent / "cordis.patch.yml"
@@ -106,21 +97,21 @@ def write_profile():
     temporary.replace(PROFILE)
 
 
-def fcc_environment(include_key=False):
-    _, key, base, model, _ = model_settings()
+def fcc_environment():
     provider = {
-        "provider_id": CUSTOM_ID, "display_name": "DeepSeek V4.1 Flash",
-        "base_url": base, "api_format": "openai_chat",
-        "reasoning_format": "openai_effort", "model_ids": [model],
+        "provider_id": CUSTOM_ID, "display_name": "OpenRouter gratuit",
+        "base_url": f"http://127.0.0.1:{OPENROUTER_PORT}/v1", "api_format": "openai_chat",
+        "reasoning_format": "provider_default", "model_ids": [MODEL],
+        "api_keys": [TOKEN_FILE.read_text().strip()],
     }
-    if include_key and key:
-        provider["api_keys"] = [key]
     return child_environment() | {
         "HOST": "127.0.0.1", "PORT": str(FCC_PORT), "FCC_OPEN_BROWSER": "false",
         "FCC_ENV_FILE": str(FCC_CONFIG),
         "PROXY_AUTH_ENABLED": "true",
         "FCC_CUSTOM_PROVIDERS": json.dumps([provider]),
-        "MODEL": f"{CUSTOM_ID}/{model}", "MODEL_FALLBACKS": "[]",
+        "MODEL": MODEL_REF, "MODEL_FALLBACKS": "[]",
+        "MODEL_HAIKU": MODEL_REF, "MODEL_SONNET": MODEL_REF,
+        "MODEL_OPUS": MODEL_REF, "MODEL_FABLE": MODEL_REF,
         "LOG_RAW_API_PAYLOADS": "false", "LOG_RAW_SSE_EVENTS": "false",
         "OTEL_SDK_DISABLED": "true", "DISABLE_TELEMETRY": "1",
         "DISABLE_NONESSENTIAL_TRAFFIC": "1",
@@ -139,15 +130,15 @@ def configure_fcc():
     temporary = FCC_CONFIG.with_name(".deploy.env")
     temporary.write_text("\n".join(lines) + "\n")
     temporary.replace(FCC_CONFIG)
+    return token
 
 
 def model_patch():
-    _, _, _, model, context = model_settings()
     filename = DATA / "model.patch.json"
     # Route Harness to the same FCC Responses endpoint used by fcc-dsh.
     filename.write_text(json.dumps([{
         "id": "agent-default-model",
-        "config": {"provider": "free-claude-code", "model": f"{CUSTOM_ID}/{model}"},
+        "config": {"provider": "free-claude-code", "model": MODEL_REF},
     }, {"id": "llm-deepseek", "disabled": True},
        {"id": "llm-deepseek-account", "disabled": True},
        {"id": "tool-web", "disabled": True},
@@ -159,10 +150,8 @@ def model_patch():
             "api": "openai-responses",
             "baseURL": f"http://127.0.0.1:{FCC_PORT}/v1",
             "models": [{
-                "id": f"{CUSTOM_ID}/{model}", "name": "DeepSeek V4.1 Flash",
-                "contextWindow": context, "input": ["text"] if context == 42000 else ["text", "image"],
-                "reasoningEfforts": {"off": "none", "low": "low", "medium": "medium",
-                                     "high": "high", "max": "max"},
+                "id": MODEL_REF, "name": "OpenRouter gratuit",
+                "contextWindow": 65536, "input": ["text"],
             }],
             "retryPolicy": {"mode": "normal", "maxRetries": 0},
             "streamIdleTimeoutMs": 180000,
@@ -279,7 +268,7 @@ def start_harness(origin, authority):
 
 def run():
     origin, authority, protocol, user, password = edge_settings()
-    selected, key, _, model, _ = model_settings()
+    key = os.environ.get(KEY_NAME, "").strip()
     for path in (DATA, HOME, WORKSPACE):
         path.mkdir(parents=True, exist_ok=True)
     env = child_environment()
@@ -289,7 +278,7 @@ def run():
         input=(password or secrets.token_urlsafe(32)) + "\n", env=env,
         capture_output=True, text=True, check=True,
     ).stdout.strip()
-    status = f"Fournisseur : {selected}. " + ("Clé configurée." if key else "Clé API à configurer.")
+    status = "Fournisseur : OpenRouter gratuit. " + ("Clé configurée." if key else "Clé API à configurer.")
     child = start(["caddy", "run", "--config", str(ROOT / "config" / "Caddyfile"), "--adapter", "caddyfile"], env | {
         "EDGE_PORT": str(EDGE_PORT), "EDGE_HOST": authority.split(":")[0],
         "EDGE_USER": user, "EDGE_PASSWORD_HASH": password_hash, "EDGE_STATUS": status,
@@ -301,14 +290,15 @@ def run():
     print(f"Interface {origin} · {status}" if password else "Interface verrouillée : renseigner WEB_PASSWORD.", flush=True)
     if password:
         HarnessLogin.diagnostics = Diagnostics(
-            origin, selected, PROVIDERS[selected][0], bool(key), f"{CUSTOM_ID}/{model}",
+            origin, bool(key), MODEL_REF,
             WORKSPACE, TOKEN_FILE, FCC_PORT, HTTP,
         )
         login = ThreadingHTTPServer(("127.0.0.1", TOKEN_PORT), HarnessLogin)
         Thread(target=login.serve_forever, daemon=True).start()
         write_profile()
-        configure_fcc()
-        wait_for_fcc(start(["fcc-server"], fcc_environment(include_key=True)))
+        token = configure_fcc()
+        start_free_router(key, token)
+        wait_for_fcc(start(["fcc-server"], fcc_environment()))
         start_harness(origin, authority)
     while all(process.poll() is None for process in PROCESSES):
         time.sleep(0.5)

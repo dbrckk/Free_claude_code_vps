@@ -4,9 +4,9 @@ Interface Web officielle de DeepSeek Harness avec le proxy Free Claude Code. Uti
 
 ## Render
 
-Le service utilise Docker et le plan Free. Dans **Environment**, ajoutez `ROUTEWAY_API_KEY` (depuis le [tableau de bord Routeway](https://routeway.ai/)) et renseignez `WEB_PASSWORD` (16 à 72 octets) si le service ne dispose pas déjà d’un mot de passe, puis choisissez **Save and deploy**. Ouvrez l’URL HTTPS du service et connectez-vous avec l’identifiant `admin` et ce mot de passe. `WEB_USERNAME` permet de changer l’identifiant.
+Le service utilise Docker et le plan Free. Dans **Environment**, ajoutez `OPENROUTER_API_KEY` (depuis les [clés OpenRouter](https://openrouter.ai/keys)) et renseignez `WEB_PASSWORD` (16 à 72 octets) si le service ne dispose pas déjà d’un mot de passe, puis choisissez **Save and deploy**. Ouvrez l’URL HTTPS du service et connectez-vous avec l’identifiant `admin` et ce mot de passe. `WEB_USERNAME` permet de changer l’identifiant.
 
-La première visite ouvre la configuration si la clé du fournisseur manque. Lors d’un démarrage à froid, la page se met à jour automatiquement pendant le chargement de Harness. La page `/_diagnostics` affiche le modèle, la présence de la clé et l’état de DeepSeek Harness et de Free Claude Code. Elle permet de vérifier l’écriture dans l’espace de travail et de déclencher un test du modèle. Si vous effacez vos cookies ou que la session Harness expire, ouvrez la racine du service ou `/_login`.
+La première visite ouvre la configuration si la clé OpenRouter manque. Lors d’un démarrage à froid, la page se met à jour automatiquement pendant le chargement de Harness. La page `/_diagnostics` affiche le modèle, la présence de la clé et l’état de DeepSeek Harness et de Free Claude Code. Elle permet de vérifier l’écriture dans l’espace de travail et de déclencher un test du modèle. Si vous effacez vos cookies ou que la session Harness expire, ouvrez la racine du service ou `/_login`.
 
 [Render Free](https://render.com/docs/free) met le service en veille après 15 minutes d’inactivité et efface ses fichiers locaux à l’arrêt ou au redéploiement. Poussez vos modifications sur Git avant de quitter. Le volume de la configuration VPS conserve les projets, conversations et réglages lorsque la conteneurisation est redémarrée.
 
@@ -23,7 +23,7 @@ nano .env
 docker compose up -d --build
 ```
 
-Renseignez `WEB_PASSWORD` et la clé du fournisseur choisi. Pour relier votre PC au VPS sans exposer le port sur Internet, ouvrez un terminal sur votre PC et maintenez le tunnel :
+Renseignez `WEB_PASSWORD` et `OPENROUTER_API_KEY`. Pour relier votre PC au VPS sans exposer le port sur Internet, ouvrez un terminal sur votre PC et maintenez le tunnel :
 
 ```bash
 ssh -N -L 8080:127.0.0.1:8080 utilisateur@serveur
@@ -37,18 +37,15 @@ Pour lancer le client Claude Code en CLI sur le même proxy depuis le serveur :
 docker compose exec harness python scripts/run.py claude
 ```
 
-Pour autoriser vos dépôts GitHub privés, ouvrez le terminal du serveur et utilisez `gh auth login --web`, puis `gh auth setup-git`. Les clés du fournisseur doivent rester dans l’environnement du serveur. Les agents doivent être utilisés uniquement avec des dépôts auxquels vous souhaitez leur donner accès.
+Pour autoriser vos dépôts GitHub privés, ouvrez le terminal du serveur et utilisez `gh auth login --web`, puis `gh auth setup-git`. La clé OpenRouter reste dans l’environnement du serveur. Les agents doivent être utilisés uniquement avec des dépôts auxquels vous souhaitez leur donner accès.
 
-## DeepSeek V4.1 Flash
+## OpenRouter gratuit
 
-| `MODEL_PROVIDER` | Variable de clé | Modèle |
-| --- | --- | --- |
-| `routeway` (par défaut) | `ROUTEWAY_API_KEY` | [V4.1 Flash :free](https://routeway.ai/models/deepseek-v4.1-flash%3Afree), 42 000 tokens de contexte. Routeway annonce 200 requêtes par jour avec disponibilité selon la file. Le suffixe 1017 est publié par Routeway comme une offre distincte. |
-| `unorouter` | `UNOROUTER_API_KEY` | [V4.1 Flash 1017 :free](https://unorouter.com/en/blog/free-deepseek-api-key), annoncé à environ une requête par minute. À vérifier avec votre clé, le catalogue public du 15 novembre 2026 ne l’affichait pas. |
-| `openrouter` | `OPENROUTER_API_KEY` | [V4.1 Flash 1017 :free](https://openrouter.ai/deepseek/deepseek-v4.1-flash-1017:free), sans fournisseur actif lors de la vérification du 15 novembre 2026. |
-| `deepseek` | `DEEPSEEK_API_KEY` | [V4.1 Flash 1017 via deepseek-flash](https://api-docs.deepseek.com/quick_start/pricing/), facturé par DeepSeek. |
+Free Claude Code utilise `openrouter/free`, qui sélectionne un modèle gratuit compatible avec la requête, notamment avec les appels d’outils. Le proxy local accepte uniquement cette route et bloque les paramètres permettant de demander un autre modèle ou d’ajouter des extensions de facturation. La clé OpenRouter est utilisée uniquement par le proxy vers l’API OpenRouter.
 
-Le fournisseur choisi reçoit les requêtes. Aucun changement automatique de modèle ou de fournisseur. Une tâche d’agent peut effectuer plusieurs requêtes.
+Avec un compte sans achat de crédits, OpenRouter documente jusqu’à 50 requêtes gratuites par jour et 20 par minute. Une seule tâche d’agent peut effectuer plusieurs requêtes, y compris des appels aux outils. Le modèle effectivement sélectionné varie en fonction des disponibilités. DeepSeek V4.1 Flash 1017 gratuit ne proposait aucun fournisseur actif dans le catalogue OpenRouter lors de la vérification du 15 novembre 2026.
+
+[Routeur gratuit OpenRouter](https://openrouter.ai/openrouter/free) · [Quotas OpenRouter](https://openrouter.ai/docs/api/reference/limits)
 
 ## Plugins
 
@@ -81,6 +78,6 @@ Les deux compétences `star-list` et `portfolio-development` sont disponibles da
 
 ## Vérifier le service
 
-`/healthz` confirme la disponibilité du point d’entrée. `/_diagnostics` est protégée par le même mot de passe que Harness. **Tester les fichiers** crée et relit un fichier temporaire, puis le supprime. **Tester DeepSeek** envoie une requête courte au modèle via le proxy. Ce test consomme une requête du quota et distingue les échecs d’accès, de quota et de disponibilité lorsque le fournisseur renvoie le code correspondant. Pour vérifier ensuite les outils de l’agent, ouvrez une nouvelle session Harness et demandez-lui de créer et relire un fichier dans l’espace de travail.
+`/healthz` confirme la disponibilité du point d’entrée. `/_diagnostics` est protégée par le même mot de passe que Harness. **Tester les fichiers** crée et relit un fichier temporaire, puis le supprime. **Tester le modèle** envoie une requête courte au modèle via le proxy. Ce test consomme une requête du quota et distingue les échecs d’accès, de quota et de disponibilité lorsque le fournisseur renvoie le code correspondant. Pour vérifier ensuite les outils de l’agent, ouvrez une nouvelle session Harness et demandez-lui de créer et relire un fichier dans l’espace de travail.
 
 Sources amont : [Free Claude Code](https://github.com/Alishahryar1/free-claude-code) et [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness). Le conteneur installe leurs distributions officielles épinglées.

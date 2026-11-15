@@ -14,13 +14,14 @@
       <p id="connection" role="status">Connexion au serveur…</p>
 
       <section id="setup" aria-labelledby="setup-title" hidden>
-        <h2 id="setup-title">Activer DeepSeek</h2>
+        <h2 id="setup-title">Activer OpenRouter</h2>
         <ol>
-          <li><a id="provider-link" href="https://routeway.ai/">Créer une clé API chez le fournisseur</a>.</li>
+          <li><a id="provider-link" href="https://openrouter.ai/keys">Créer une clé API OpenRouter</a>.</li>
           <li id="render-help" hidden>Dans les <a id="render-link" href="https://dashboard.render.com/">variables Render</a>, ajoute <code id="render-key"></code> et colle la clé comme valeur. Choisis <strong>Save and deploy</strong>.</li>
           <li id="vps-help" hidden>Ajoute la clé dans <code id="vps-key"></code> dans le fichier <code>.env</code>, puis relance le service avec <code>docker compose up -d</code>.</li>
-          <li>Une fois le déploiement terminé, reviens ici, actualise et clique sur <strong>Tester DeepSeek</strong>.</li>
+          <li>Une fois le déploiement terminé, reviens ici, actualise et clique sur <strong>Tester le modèle</strong>.</li>
         </ol>
+        <p>Aucun achat de crédits ni abonnement n’est nécessaire pour utiliser le routeur gratuit.</p>
       </section>
 
       <dl>
@@ -38,8 +39,8 @@
 
       <section class="checks" aria-label="Vérifications">
         <div>
-          <button id="probe" type="button" aria-describedby="model-note" disabled>Tester DeepSeek</button>
-          <p id="model-note" class="note">Envoie une requête courte qui compte dans le quota du fournisseur.</p>
+          <button id="probe" type="button" aria-describedby="model-note" disabled>Tester le modèle</button>
+          <p id="model-note" class="note">Envoie une requête courte qui compte dans le quota gratuit OpenRouter.</p>
           <p id="model-result" class="result" role="status"></p>
         </div>
         <div>

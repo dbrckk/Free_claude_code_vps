@@ -33,7 +33,6 @@ async function refresh() {
     byId("proxy").textContent = state.proxyReady ? "Prêt" : "Démarrage en cours";
 
     byId("provider-link").href = state.providerSetupUrl;
-    byId("provider-link").textContent = "Créer une clé API chez " + state.provider;
     if (state.renderEnvironmentUrl) byId("render-link").href = state.renderEnvironmentUrl;
     byId("render-key").textContent = state.keyName;
     byId("vps-key").textContent = state.keyName;

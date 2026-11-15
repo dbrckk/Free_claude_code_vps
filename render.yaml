@@ -8,5 +8,5 @@ services:
     envVars:
       - key: WEB_PASSWORD
         sync: false
-      - key: ROUTEWAY_API_KEY
+      - key: OPENROUTER_API_KEY
         sync: false

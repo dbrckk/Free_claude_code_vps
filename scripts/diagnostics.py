@@ -11,23 +11,17 @@ from threading import Lock
 from urllib.error import HTTPError, URLError
 from urllib.request import Request
 
+from free_router import KEY_NAME, MODEL, SETUP_URL
+
 ASSETS = Path(__file__).resolve().parent.parent / "config"
 PROBE_COOLDOWN = 60
-PROVIDER_SETUP_URLS = {
-    "routeway": "https://routeway.ai/",
-    "unorouter": "https://unorouter.com/",
-    "openrouter": "https://openrouter.ai/keys",
-    "deepseek": "https://platform.deepseek.com/api_keys",
-}
 
 
 class Diagnostics:
-    def __init__(self, origin, provider, key_name, key_configured, model, workspace, token_file, fcc_port, http):
+    def __init__(self, origin, key_configured, model_ref, workspace, token_file, fcc_port, http):
         self.origin = origin
-        self.provider = provider
-        self.key_name = key_name
         self.key_configured = key_configured
-        self.model = model
+        self.model_ref = model_ref
         self.workspace = workspace
         self.token_file = token_file
         self.fcc_url = f"http://127.0.0.1:{fcc_port}/v1"
@@ -61,7 +55,7 @@ class Diagnostics:
 
     def proxy_ready(self):
         try:
-            return self.fcc_request("/models?view=responses").get("default_model_id") == self.model
+            return self.fcc_request("/models?view=responses").get("default_model_id") == self.model_ref
         except (OSError, ValueError, AttributeError):
             return False
 
@@ -72,11 +66,11 @@ class Diagnostics:
             if re.fullmatch(r"srv-[a-z0-9]+", service_id) else None
         )
         return {
-            "provider": self.provider,
-            "model": self.model.partition("/")[2],
+            "provider": "OpenRouter",
+            "model": MODEL,
             "keyConfigured": self.key_configured,
-            "keyName": self.key_name,
-            "providerSetupUrl": PROVIDER_SETUP_URLS[self.provider],
+            "keyName": KEY_NAME,
+            "providerSetupUrl": SETUP_URL,
             "renderEnvironmentUrl": render_url,
             "harnessReady": harness_ready,
             "proxyReady": self.proxy_ready(),
@@ -95,7 +89,7 @@ class Diagnostics:
 
     def check_model(self):
         if not self.key_configured:
-            return HTTPStatus.CONFLICT, "Ajoute la clé du fournisseur dans les variables du serveur."
+            return HTTPStatus.CONFLICT, "Ajoute OPENROUTER_API_KEY dans les variables du serveur."
         if not self.proxy_ready():
             return HTTPStatus.SERVICE_UNAVAILABLE, "Free Claude Code termine son démarrage. Réessaie dans un instant."
 
@@ -107,7 +101,7 @@ class Diagnostics:
 
         try:
             response = self.fcc_request("/responses", {
-                "model": self.model,
+                "model": self.model_ref,
                 "input": "Reply with exactly OK.",
                 "reasoning": {"effort": "none"},
                 "max_output_tokens": 32,
@@ -122,23 +116,23 @@ class Diagnostics:
                 if part.get("type") == "output_text"
             ).strip()
             if response.get("status") == "completed" and message:
-                return HTTPStatus.OK, "DeepSeek a répondu via Free Claude Code."
+                return HTTPStatus.OK, "OpenRouter a répondu via Free Claude Code."
             error = response.get("error") or {}
             code = error.get("code") or response.get("code")
             if code in ("rate_limit_exceeded", "insufficient_quota"):
-                return HTTPStatus.BAD_GATEWAY, "Le fournisseur signale un problème de crédits ou de quota."
+                return HTTPStatus.BAD_GATEWAY, "OpenRouter signale une limite de quota ou une restriction du compte."
             if code in ("authentication_error", "invalid_api_key", "permission_denied"):
                 return HTTPStatus.BAD_GATEWAY, "La clé ou l’accès au modèle a été refusé."
             if code == "model_not_found":
-                return HTTPStatus.BAD_GATEWAY, "Le modèle n’est pas disponible chez le fournisseur."
+                return HTTPStatus.BAD_GATEWAY, "Aucun modèle compatible n’est disponible chez OpenRouter."
         except HTTPError as error:
             with error:
                 if error.code in (401, 403):
                     return HTTPStatus.BAD_GATEWAY, "La clé ou l’accès au modèle a été refusé."
                 if error.code in (402, 429):
-                    return HTTPStatus.BAD_GATEWAY, "Le fournisseur signale un problème de crédits ou de quota."
+                    return HTTPStatus.BAD_GATEWAY, "OpenRouter signale une limite de quota ou une restriction du compte."
                 if error.code == 404:
-                    return HTTPStatus.BAD_GATEWAY, "Le modèle n’est pas disponible chez le fournisseur."
+                    return HTTPStatus.BAD_GATEWAY, "Aucun modèle compatible n’est disponible chez OpenRouter."
         except (TimeoutError, URLError):
             return HTTPStatus.GATEWAY_TIMEOUT, "Le modèle n’a pas répondu à temps."
         except (OSError, ValueError, TypeError, AttributeError):
